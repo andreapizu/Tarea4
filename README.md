@@ -168,12 +168,12 @@ Graficar la densidad espectral de potencia de la señal con el método de Welch 
     bitsSruidosa =np.zeros(datos.shape)
 
     # Decodificación de la señal por detección de energía
-    for i, b in enumerate(datos):
-        Ep = np.sum(Sruidosa[i*P:(i+1)*P] * seno)
+    for k, b in enumerate(datos):
+        Ep = np.sum(Sruidosa[k*P:(k+1)*P] * seno)
         if Ep > Es/2:
-            bitsSruidosa[i] = 1
+            bitsSruidosa[k] = 1
         else:
-            bitsSruidosa[i] = 0  
+            bitsSruidosa[k] = 0  
             
     error = np.sum(np.abs(datos - bitsSruidosa))
     BER.append(error/N)
