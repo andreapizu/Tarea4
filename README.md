@@ -12,21 +12,24 @@ from scipy import signal
 from scipy import integrate
 import matplotlib.pyplot as plt
 
-datos = pd.read_csv('bits10k.csv',names=['A'],header=None)
-bits=datos['A']
+#Realizo la llamada de los datos
+misbits = pd.read_csv('bits10k.csv',names=['A'],header=None)
+datos=misbits['A']
+
+N=10000
+#Parte 1.
+#Crear un esquema de modulación BPSK para los bits presentados.
+#Esto implica asignar una forma de onda sinusoidal normalizada (amplitud unitaria) para cada bit 
 
 
-#Frecuencia 
+#frecuencia de portadora 5 kHz y N=10 kbits
 f=5000 #Hz
-
-#Cantidad de bits a trabajar 
-N=10000#
 
 #Periodo
 T=1/f 
 
 #Numero de Puntos de muestreo
-p=50
+P=50
 
 #Puntos de muestreo de cada periodo
 tp=np.linspace(0,T,P)
@@ -34,50 +37,49 @@ tp=np.linspace(0,T,P)
 #forma de onda de la portadora
 seno =np.sin(2*np.pi*f*tp)
 
-#Visualización de la función portadora 
+#Visualización de la onda portadora
 plt.plot(tp,seno)
-plt.figure(1)
 plt.xlabel('Tiempo(s)')
-plt.title('Función Portadora')
+plt.title('Onda portadora')
+plt.figure(1)
 plt.savefig('Portadora.png')
 
 #frecuencia de muestreo
-fs= p/T 
+fs= P/T
 
-#linea temporal para toda la senal
-t = np.linspace(0,N*T,N*p)
-
-
-
+#Tiempo  para toda la señal
+t = np.linspace(0,N*T,N*P)
 
 #Inicializador
-señal= np.zeros(t.shape)
+senal= np.zeros(t.shape)
 
-
-#Creacion de la senal modulada BPSK
-for k,b in enumerate(bits):
+#Se crea la señal modulada BPSK
+for i,b in enumerate(datos):
     if b==1:
-        señal[k*p:(k+1)*p]= seno
+        senal[i*P:(i+1)*P]=seno   
     else:
-        señal[k*p:(k+1)*p]=-seno
+        senal[i*P:(i+1)*P]=-seno    #En la señal modulada BPSK, se toma en cuenta un seno negativo en la función 
            
-#Visualizacion
+#Visualizacion de la señal modulada 
 plt.figure(2)
-plt.title("Señal Modulada")
-plt.savefig("SeñalModulada.png")
-plt.plot(senal[0:5*p])
+plt.plot(senal[0:5*P])
 plt.show()
+
+
 ~~~
 ![SeñalModulada](SeñalModulada.png)
 #### Parte 2
 Calcular la potencia promedio de la señal modulada generada:
 ~~~python
+#Calcular la potencia promedio de la señal modulada generada.
+
 #potencia instantanea 
-Pins=señal**2
+Pinstantánea=senal**2
 
 #potencia promedio
-Pr=integrate.trapz(Pins,t)/(N*T)
-print('Potencia promedio:', Pr)
+Promedio=integrate.trapz(Pinstantánea,t)/(N*T)
+print('Potencia promedio:', Promedio)
+
 ~~~
 La respuesta es la siguiente:
 Potencia promedio: 0.4900009800019598 
@@ -86,23 +88,37 @@ Potencia promedio: 0.4900009800019598
  Graficar la densidad espectral de potencia de la señal con el método de Welch (SciPy), ANTES del canal ruidoso.
 
 ~~~python
-fw, PSD = signal.welch(senal, fs, nperseg=1024)
-plt.figure(4)
-plt.semilogy(fw, PSD)
-plt.xlabel('Frecuencia / Hz')
-plt.ylabel('Densidad espectral de potencia / V**2/Hz')
-plt.show()
+   #Graficar la densidad espectral de potencia de la señal con el método de Welch (SciPy)
+    #Antes y después del canal ruidoso.
+    
+    
+     # Antes del canal ruidoso
+        
+    frecuencia, PSD = signal.welch(senal, fs, nperseg=1024)
+    plt.figure(4)
+   
+    plt.semilogy(frecuencia, PSD)
+    plt.title("Densidad Antes del canal Ruidoso")
+    plt.xlabel('Frecuencia / Hz')
+    plt.ylabel("Densidad espectral de potencia")
+    plt.show()
 ~~~
 ![densidadantes](densidadantes.png)
 #### Parte 4
-Simular un canal ruidoso del tipo AWGN (ruido aditivo blanco gaussiano) con una relación señal a ruido (SNR) desde -5 hasta 0 dB
+Simular un canal ruidoso del tipo AWGN (ruido aditivo blanco gaussiano) con una relación señal a ruido (SNR) desde -2 hasta 5 dB
 ~~~python
+#Simular un canal ruidoso del tipo AWGN (ruido aditivo blanco gaussiano) 
+#Con una relación señal a ruido (SNR) desde -2 hasta 5 dB
+
+#En este caso, por sugerencia del profesor se cambia el rango, para observar distintas cantidades de errores en la parte 5 de la tarea.
+
+
 # Relación señal-a-ruido deseada
-SNR = range(-2,4)
+SNR = range(-2,5)  #Rango a estudiar
 BER=[]
-for snr in SNR:
+for n in SNR:
     # Potencia del ruido para SNR y potencia de la señal dadas
-    Pn = Pr / (10**(snr / 10))
+    Pn = Promedio / (10**(n / 10))
 
     # Desviación estándar del ruido
     sigma = np.sqrt(Pn)
@@ -111,61 +127,58 @@ for snr in SNR:
     ruido = np.random.normal(0, sigma, senal.shape)
 
     # Simular "el canal": señal recibida
-    Sr = senal + ruido
+    Sruidosa = senal + ruido
 
     # Visualización de los primeros bits recibidos
     pb = 5 #primeros bits 
     plt.figure(3)
-    plt.plot(Sr[0:pb*p])
+    plt.title("SEÑAL RUIDOSA")
+    plt.plot(Sruidosa[0:pb*P])
     plt.show()
-     # Pseudo-energía de la onda original (esta es suma, no integral)
-Es = np.sum(seno**2)
-    # Inicialización del vector de bits recibidos
-bitsSr =np.zeros(bits.shape)
-
-    # Decodificación de la señal por detección de energía
-for i, b in enumerate(bits):
-    Ep = np.sum(Sr[i*P:(i+1)*P] * seno)
-    if Ep > Es/2:
-        bitsSr[i] = 1
-    else:
-        bitsSr[i] = 0  
-            
-err = np.sum(np.abs(bits - bitsSr))
-BER.append(err/N)
-print('Hay un total de {} errores en {} bits para una tasa de error de {} para el SNR de {}'.format(err, N, err/N, snr))
+   
 
 ~~~
 ![señalruidosa](señalruidosa.png)
 #### Parte 5
 Graficar la densidad espectral de potencia de la señal con el método de Welch (SciPy), DESPUÉS del canal ruidoso.
 ~~~python
-fw, PSD = signal.welch(Sr, fs, nperseg=1024)
-plt.figure(5)
-plt.semilogy(fw, PSD)
-plt.xlabel('Frecuencia / Hz')
-plt.ylabel('Densidad espectral de potencia / V**2/Hz')
-plt.show()
+ # Después del canal ruidoso
+    
+    frecuencia, PSD = signal.welch(Sruidosa, fs, nperseg=1024)
+    plt.figure(5)
+    plt.title("Densidad Después del canal Ruidoso")
+    plt.semilogy(frecuencia, PSD)
+    plt.xlabel('Frecuencia / Hz')
+    plt.ylabel("Densidad espectral de potencia")
+    plt.show()
 ~~~
 ![densidaddespués](densidaddespués.png)
 #### Parte 6
 ~~~python
- # Pseudo-energía de la onda original (esta es suma, no integral)
+#Demodular y decodificar la señal 
+    #Hacer un conteo de la tasa de error de bits (BER, bit error rate) para cada nivel SNR.
+    #En esta parte del código, se visualizan los diferentes errores que existe en el rango descrito en la parte 3
+    #Sin embargo para valores mayores a 1, el error es de 0(como se puede observar en las gráficas)
+    #Esto se debe gracias a que las señales moduladas de BSPK, son bastantes ROBUSTAS.
+
+    
+    # Pseudo-energía de la onda original (esta es suma, no integral)
     Es = np.sum(seno**2)
     # Inicialización del vector de bits recibidos
-    bitsSr = np.zeros(bits.shape)
+    bitsSruidosa =np.zeros(datos.shape)
 
     # Decodificación de la señal por detección de energía
-    for i, b in enumerate(bits):
-        Ep = np.sum(Sr[i*P:(i+1)*P] * seno)
+    for i, b in enumerate(datos):
+        Ep = np.sum(Sruidosa[i*P:(i+1)*P] * seno)
         if Ep > Es/2:
-            bitsSr[i] = 1
+            bitsSruidosa[i] = 1
         else:
-            bitsSr[i] = 0  
+            bitsSruidosa[i] = 0  
             
-    err = np.sum(np.abs(bits - bitsSr))
-    BER.append(err/N)
-    print('Hay un total de {} errores en {} bits para una tasa de error de {} para el SNR de {}'.format(err, N, err/N, snr))
+    error = np.sum(np.abs(datos - bitsSruidosa))
+    BER.append(error/N)
+    print('Hay un total de {} errores en {} bits para una tasa de error de {} para el SNR de {}'.format(error, N, error/N, n))
+
 ~~~
 ![-2](-2.png)
 ![-1](-1.png)
@@ -175,10 +188,18 @@ plt.show()
 
 #### Parte 7
 ~~~python
+#Graficar BER versus SNR.
+
 plt.semilogy(SNR, BER)
-plt.title("VERSUS ")
+
+plt.title(" Graficar BER versus SNR ")
 plt.xlabel('SNR')
+#plt.ylabel("BER")
 plt.show()
 ~~~
 ![BERSNR](BERSNR.png)   
     
+#### Para realizar la tarea 4 se utilizó la guía de Py8, brindada por el porfesor y video sugerido en la discusión de la tarea en clase, como se muestra en el siguiente link: 
+https://youtu.be/xy9kD2yzlpE
+
+
